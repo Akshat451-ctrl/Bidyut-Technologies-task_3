@@ -1,16 +1,47 @@
+import { useState, useEffect } from "react";
+import axios from "axios";
+
 const ALL_SIZES = ["XS","S","M","L","XL","XXL","28","30","32","34","36","2Y","4Y","6Y","8Y"];
+const DISCOUNT_OPTIONS = [10, 20, 30, 40, 50];
+const RATING_OPTIONS   = [4, 3, 2];
 
 export default function FilterPanel({
   priceRange, minPrice, maxPrice, onMinPriceChange, onMaxPriceChange,
   selectedSize, onSizeChange,
+  selectedBrands, onBrandToggle,
+  minDiscount, onMinDiscountChange,
+  minRating, onMinRatingChange,
+  selectedCategory,
 }) {
+  const [brands, setBrands] = useState([]);
+  const [showAllBrands, setShowAllBrands] = useState(false);
+
   const fmt = (v) => `₹${Number(v || 0).toLocaleString("en-IN")}`;
+
+  useEffect(() => {
+    axios.get("/api/products/filter-options", {
+      params: { category: selectedCategory },
+    }).then(res => setBrands(res.data.brands || [])).catch(() => {});
+  }, [selectedCategory]);
 
   const handleReset = () => {
     onMinPriceChange(priceRange.min);
     onMaxPriceChange(priceRange.max);
     onSizeChange("");
+    onMinDiscountChange(0);
+    onMinRatingChange(0);
+    selectedBrands.forEach(b => onBrandToggle(b)); // clear all
   };
+
+  const activeFilterCount = [
+    minPrice > priceRange.min || maxPrice < priceRange.max,
+    selectedSize !== "",
+    selectedBrands.length > 0,
+    minDiscount > 0,
+    minRating > 0,
+  ].filter(Boolean).length;
+
+  const visibleBrands = showAllBrands ? brands : brands.slice(0, 7);
 
   return (
     <aside className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden lg:sticky lg:top-[100px] transition-colors duration-300">
@@ -21,6 +52,11 @@ export default function FilterPanel({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
           </svg>
           Filters
+          {activeFilterCount > 0 && (
+            <span className="w-4 h-4 bg-orange-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">
+              {activeFilterCount}
+            </span>
+          )}
         </h2>
         <button onClick={handleReset} className="text-xs text-orange-500 font-semibold hover:text-orange-600 cursor-pointer transition-colors">
           Clear All
@@ -28,6 +64,7 @@ export default function FilterPanel({
       </div>
 
       <div className="divide-y divide-gray-100 dark:divide-gray-800">
+
         {/* Price Range */}
         <div className="px-4 py-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Price Range</h3>
@@ -75,44 +112,74 @@ export default function FilterPanel({
           </div>
         </div>
 
-        {/* Popular Brands */}
-        <div className="px-4 py-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Top Brands</h3>
-          <div className="space-y-2">
-            {["Nike","Adidas","Zara","H&M","Levis","Biba","Mango"].map((brand) => (
-              <label key={brand} className="flex items-center gap-2.5 cursor-pointer group">
-                <input type="checkbox" className="w-3.5 h-3.5 accent-orange-500 cursor-pointer" />
-                <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">{brand}</span>
-              </label>
-            ))}
+        {/* Brands — dynamic from DB */}
+        {brands.length > 0 && (
+          <div className="px-4 py-4">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Brands</h3>
+            <div className="space-y-2">
+              {visibleBrands.map((brand) => (
+                <label key={brand} className="flex items-center gap-2.5 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={selectedBrands.includes(brand)}
+                    onChange={() => onBrandToggle(brand)}
+                    className="w-3.5 h-3.5 accent-orange-500 cursor-pointer"
+                  />
+                  <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">{brand}</span>
+                </label>
+              ))}
+            </div>
+            {brands.length > 7 && (
+              <button onClick={() => setShowAllBrands(!showAllBrands)}
+                className="mt-2 text-xs text-orange-500 font-semibold hover:text-orange-600 cursor-pointer transition-colors">
+                {showAllBrands ? "Show less" : `+${brands.length - 7} more`}
+              </button>
+            )}
           </div>
-        </div>
+        )}
 
         {/* Discount */}
         <div className="px-4 py-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Discount</h3>
           <div className="space-y-2">
-            {["10% and above","20% and above","30% and above","40% and above","50% and above"].map((d) => (
+            {DISCOUNT_OPTIONS.map((d) => (
               <label key={d} className="flex items-center gap-2.5 cursor-pointer group">
-                <input type="checkbox" className="w-3.5 h-3.5 accent-orange-500 cursor-pointer" />
-                <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">{d}</span>
+                <input
+                  type="radio"
+                  name="discount"
+                  checked={minDiscount === d}
+                  onChange={() => onMinDiscountChange(minDiscount === d ? 0 : d)}
+                  onClick={() => { if (minDiscount === d) onMinDiscountChange(0); }}
+                  className="w-3.5 h-3.5 accent-orange-500 cursor-pointer"
+                />
+                <span className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors">
+                  {d}% and above
+                </span>
               </label>
             ))}
           </div>
         </div>
 
-        {/* Customer Rating */}
+        {/* Rating */}
         <div className="px-4 py-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-3">Rating</h3>
           <div className="space-y-2">
-            {["4★ & above","3★ & above","2★ & above"].map((r) => (
+            {RATING_OPTIONS.map((r) => (
               <label key={r} className="flex items-center gap-2.5 cursor-pointer group">
-                <input type="checkbox" className="w-3.5 h-3.5 accent-orange-500 cursor-pointer" />
-                <span className="text-sm text-amber-500 font-medium">{r}</span>
+                <input
+                  type="radio"
+                  name="rating"
+                  checked={minRating === r}
+                  onChange={() => onMinRatingChange(minRating === r ? 0 : r)}
+                  onClick={() => { if (minRating === r) onMinRatingChange(0); }}
+                  className="w-3.5 h-3.5 accent-orange-500 cursor-pointer"
+                />
+                <span className="text-sm text-amber-500 font-medium">{r}★ & above</span>
               </label>
             ))}
           </div>
         </div>
+
       </div>
     </aside>
   );

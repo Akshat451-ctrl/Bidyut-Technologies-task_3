@@ -93,7 +93,7 @@ export default function ProfilePage({ onClose }) {
               </div>
             ) : (
               <div className="text-center py-4">
-                <p className="text-white font-bold text-lg mb-1">Welcome to FabricHub</p>
+                <p className="text-white font-bold text-lg mb-1">Welcome to Bidyut Innovation Store</p>
                 <p className="text-white/70 text-sm mb-4">Sign in to view your profile & orders</p>
                 <button onClick={() => setShowAuth(true)}
                   className="bg-white text-orange-600 font-bold px-6 py-2.5 rounded-xl hover:bg-orange-50 transition-colors cursor-pointer text-sm">

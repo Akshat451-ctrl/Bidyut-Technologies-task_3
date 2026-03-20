@@ -35,7 +35,7 @@ export default function AuthModal({ onClose, defaultTab = "login" }) {
     setLoading(true);
     try {
       await register(regData.name, regData.email, regData.password);
-      setSuccess("Account created! Welcome to FabricHub 🎉");
+      setSuccess("Account created! Welcome to Bidyut Innovation Store 🎉");
       setTimeout(onClose, 1200);
     } catch (err) {
       setError(err.response?.data?.message || "Registration failed.");
@@ -63,8 +63,8 @@ export default function AuthModal({ onClose, defaultTab = "login" }) {
         <div className="p-7">
           {/* Logo */}
           <div className="flex items-center gap-2 mb-6">
-            <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center text-white font-black text-base shadow-md">F</div>
-            <span className="font-display font-black text-2xl">Fabric<span className="text-orange-500">Hub</span></span>
+            <div className="w-9 h-9 bg-gradient-to-br from-orange-500 to-pink-500 rounded-xl flex items-center justify-center text-white font-black text-base shadow-md">B</div>
+            <span className="font-display font-black text-2xl">Bidyut<span className="text-orange-500"> Innovation Store</span></span>
           </div>
 
           {/* Tabs */}

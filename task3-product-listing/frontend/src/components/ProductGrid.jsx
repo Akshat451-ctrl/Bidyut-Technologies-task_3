@@ -14,10 +14,10 @@ function Skeleton() {
   );
 }
 
-export default function ProductGrid({ products, loading }) {
+export default function ProductGrid({ products, loading, hasMore, loadingMore, onLoadMore, onProductClick }) {
   if (loading) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
         {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} />)}
       </div>
     );
@@ -38,8 +38,29 @@ export default function ProductGrid({ products, loading }) {
   }
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-4">
-      {products.map((p) => <ProductCard key={p._id} product={p} />)}
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
+        {products.map((p) => <ProductCard key={p._id} product={p} onProductClick={onProductClick} />)}
+      </div>
+
+      {hasMore && (
+        <div className="flex justify-center pt-2">
+          <button
+            onClick={onLoadMore}
+            disabled={loadingMore}
+            className="px-10 py-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm font-bold text-gray-700 dark:text-gray-300 hover:border-orange-400 hover:text-orange-500 transition-all cursor-pointer disabled:opacity-60 flex items-center gap-2 shadow-sm"
+          >
+            {loadingMore
+              ? <><div className="w-4 h-4 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" /> Loading...</>
+              : "Load More Products"
+            }
+          </button>
+        </div>
+      )}
+
+      {!hasMore && products.length > 0 && (
+        <p className="text-center text-xs text-gray-400 py-2">Showing all {products.length} products</p>
+      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCart } from "../context/CartContext";
 
 const fmt = (p) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p);
@@ -16,17 +17,35 @@ function WishlistBtn({ wished, onToggle }) {
   );
 }
 
-export default function ProductCard({ product }) {
-  const [wished, setWished] = useState(false);
-  const [imgErr, setImgErr] = useState(false);
-  const [hovered, setHovered] = useState(false);
-  const [added, setAdded]   = useState(false);
+export default function ProductCard({ product, onProductClick }) {
+  const { addItem } = useCart();
+  const [wished, setWished]         = useState(false);
+  const [imgErr, setImgErr]         = useState(false);
+  const [hovered, setHovered]       = useState(false);
+  const [added, setAdded]           = useState(false);
+  const [pickingSize, setPickingSize] = useState(false);
 
-  const handleAdd = (e) => {
+  const hasSizes = product.sizes && product.sizes.length > 0;
+
+  const handleAdd = (e, size) => {
     e.stopPropagation();
     if (!product.inStock || added) return;
+    addItem(product, size);
     setAdded(true);
+    setPickingSize(false);
     setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleQuickAdd = (e) => {
+    e.stopPropagation();
+    if (!product.inStock || added) return;
+    if (hasSizes) {
+      setPickingSize(prev => !prev);
+    } else {
+      addItem(product, "");
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
+    }
   };
 
   const imgSrc = imgErr
@@ -36,10 +55,11 @@ export default function ProductCard({ product }) {
   return (
     <div
       className="group bg-white dark:bg-gray-900 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-800 hover:shadow-xl hover:border-gray-200 dark:hover:border-gray-700 transition-all duration-300 cursor-pointer"
+      onClick={() => onProductClick?.(product)}
       onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      onMouseLeave={() => { setHovered(false); setPickingSize(false); }}
     >
-      {/* Image container - portrait ratio */}
+      {/* Image container */}
       <div className="relative overflow-hidden bg-gray-50 dark:bg-gray-800" style={{ aspectRatio: "4/5" }}>
         <img
           src={imgSrc}
@@ -89,15 +109,35 @@ export default function ProductCard({ product }) {
           </div>
         )}
 
-        {/* Quick add overlay */}
-        <div className={`absolute bottom-0 left-0 right-0 transition-all duration-300 ${hovered && product.inStock ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"}`}>
-          <button
-            onClick={handleAdd}
-            className={`w-full py-2.5 text-sm font-bold transition-all cursor-pointer
-              ${added ? "bg-green-500 text-white" : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-orange-500 dark:hover:bg-orange-500 dark:hover:text-white"}`}
-          >
-            {added ? "✓ Added to Cart!" : "Quick Add"}
-          </button>
+        {/* Quick add / size picker overlay */}
+        <div className={`absolute bottom-0 left-0 right-0 transition-all duration-300 ${hovered && product.inStock ? "opacity-100 translate-y-0" : "opacity-0 translate-y-full"}`} onClick={(e) => e.stopPropagation()}>
+          {pickingSize ? (
+            <div className="bg-white/96 dark:bg-gray-900/96 backdrop-blur-sm px-2 py-2.5">
+              <p className="text-[10px] font-bold text-gray-400 text-center mb-1.5 uppercase tracking-wide">Select Size</p>
+              <div className="flex flex-wrap gap-1 justify-center">
+                {product.sizes.map(s => (
+                  <button
+                    key={s}
+                    onClick={(e) => handleAdd(e, s)}
+                    className="px-2 py-1 text-xs font-bold border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-orange-500 hover:text-white hover:border-orange-500 text-gray-700 dark:text-gray-300 cursor-pointer transition-all"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={handleQuickAdd}
+              className={`w-full py-2.5 text-sm font-bold transition-all cursor-pointer
+                ${added
+                  ? "bg-green-500 text-white"
+                  : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-orange-500 dark:hover:bg-orange-500 dark:hover:text-white"
+                }`}
+            >
+              {added ? "✓ Added to Cart!" : hasSizes ? "Quick Add" : "Add to Cart"}
+            </button>
+          )}
         </div>
       </div>
 

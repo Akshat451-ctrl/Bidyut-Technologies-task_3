@@ -13,9 +13,9 @@ export default function MobileMenu({ isOpen, onClose, selectedCategory, onCatego
         {/* Header */}
         <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-black text-xs">F</div>
+            <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-black text-xs">B</div>
             <span className="font-display font-black text-lg">
-              Fabric<span className="text-orange-500">Hub</span>
+              Bidyut<span className="text-orange-500"> Innovation Store</span>
             </span>
           </div>
           <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center justify-center cursor-pointer transition-colors">

@@ -5,7 +5,11 @@ const Product = require("../models/Product");
 // GET /api/products
 router.get("/", async (req, res) => {
   try {
-    const { category, subCategory, gender, minPrice, maxPrice, sortBy, search, size, page = 1, limit = 16 } = req.query;
+    const {
+      category, subCategory, gender, minPrice, maxPrice,
+      sortBy, search, size, brands, minDiscount, minRating,
+      page = 1, limit = 16
+    } = req.query;
 
     const filter = {};
 
@@ -25,6 +29,19 @@ router.get("/", async (req, res) => {
     if (subCategory) filter.subCategory = subCategory;
     if (gender && gender !== "All") filter.gender = gender;
     if (size) filter.sizes = size;
+
+    if (brands) {
+      const brandList = Array.isArray(brands) ? brands : brands.split(",").map(b => b.trim()).filter(Boolean);
+      if (brandList.length) filter.brand = { $in: brandList };
+    }
+
+    if (minDiscount && Number(minDiscount) > 0) {
+      filter.discount = { $gte: Number(minDiscount) };
+    }
+
+    if (minRating && Number(minRating) > 0) {
+      filter.rating = { $gte: Number(minRating) };
+    }
 
     if (minPrice !== undefined || maxPrice !== undefined) {
       filter.price = {};
@@ -83,6 +100,18 @@ router.get("/categories", async (req, res) => {
   try {
     const categories = await Product.distinct("category");
     res.json({ success: true, categories: ["All", ...categories] });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Server Error" });
+  }
+});
+
+// GET /api/products/filter-options
+router.get("/filter-options", async (req, res) => {
+  try {
+    const { category } = req.query;
+    const match = category && category !== "All" ? { category } : {};
+    const brands = await Product.distinct("brand", match);
+    res.json({ success: true, brands: brands.sort() });
   } catch (err) {
     res.status(500).json({ success: false, message: "Server Error" });
   }

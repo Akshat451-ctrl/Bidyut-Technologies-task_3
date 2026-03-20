@@ -1,14 +1,10 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
 
 const fmt = (p) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p);
-
-const INITIAL_ITEMS = [
-  { id: 1, name: "Classic White Oxford Shirt", brand: "Raymond", size: "L", color: "#FFFFFF", price: 1299, mrp: 2499, qty: 1, img: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=120&h=150&fit=crop" },
-  { id: 2, name: "Slim Fit Mid-Rise Blue Jeans", brand: "Levis 511", size: "32", color: "#1e3a5f", price: 1899, mrp: 3499, qty: 2, img: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=120&h=150&fit=crop" },
-];
 
 // Load Razorpay script dynamically
 function loadRazorpayScript() {
@@ -24,7 +20,7 @@ function loadRazorpayScript() {
 
 export default function CartPage({ onClose, onAuthNeeded }) {
   const { user } = useAuth();
-  const [items, setItems]           = useState(INITIAL_ITEMS);
+  const { items, updateQty, removeItem, clearCart } = useCart();
   const [paying, setPaying]         = useState(false);
   const [paySuccess, setPaySuccess] = useState(null);
   const [payError, setPayError]     = useState("");
@@ -44,17 +40,14 @@ export default function CartPage({ onClose, onAuthNeeded }) {
     if (user) setAddress({ name: user.name, phone: user.phone || "", street: user.address?.street || "", city: user.address?.city || "", state: user.address?.state || "", pincode: user.address?.pincode || "" });
   }, [user]);
 
-  const updateQty = (id, d) => setItems((p) => p.map((it) => it.id === id ? { ...it, qty: Math.max(1, it.qty + d) } : it));
-  const remove    = (id) => setItems((p) => p.filter((it) => it.id !== id));
-
   const subtotal  = items.reduce((s, it) => s + it.price * it.qty, 0);
   const savings   = items.reduce((s, it) => s + (it.mrp - it.price) * it.qty, 0);
   const delivery  = subtotal > 999 ? 0 : 79;
   const total     = subtotal + delivery;
 
   const runDemoPayment = () => {
-    // Simulate Razorpay UI with a 2s delay then success
     setTimeout(() => {
+      clearCart();
       setPaySuccess({
         paymentId: "pay_demo_" + Math.random().toString(36).slice(2, 14).toUpperCase(),
         orderId:   "order_demo_" + Math.random().toString(36).slice(2, 14).toUpperCase(),
@@ -90,7 +83,7 @@ export default function CartPage({ onClose, onAuthNeeded }) {
         key:         data.keyId,
         amount:      data.amount,
         currency:    data.currency,
-        name:        "FabricHub",
+        name:        "Bidyut Innovation Store",
         description: `Order of ${items.length} item(s)`,
         image:       "https://i.imgur.com/n5tjHFD.png",
         order_id:    data.orderId,
@@ -111,6 +104,7 @@ export default function CartPage({ onClose, onAuthNeeded }) {
               razorpay_signature:  response.razorpay_signature,
             });
             if (verify.data.success) {
+              clearCart();
               setPaySuccess({
                 paymentId: response.razorpay_payment_id,
                 orderId:   response.razorpay_order_id,
@@ -225,35 +219,48 @@ export default function CartPage({ onClose, onAuthNeeded }) {
                 )}
 
                 <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
-                      <div className="w-20 h-24 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
-                        <img src={item.img} alt={item.name} className="w-full h-full object-cover" onError={(e) => e.target.src = "https://placehold.co/80x96"} />
+                  {items.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                      <div className="w-20 h-20 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
+                        <span className="text-4xl">🛒</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">{item.brand}</p>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-tight mt-0.5 line-clamp-2">{item.name}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded">Size: {item.size}</span>
-                          <span className="w-3.5 h-3.5 rounded-full border border-gray-300" style={{ background: item.color }} />
-                        </div>
-                        <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="font-extrabold text-gray-900 dark:text-gray-100 text-sm">{fmt(item.price)}</span>
-                            <span className="text-xs text-gray-400 line-through">{fmt(item.mrp)}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <button onClick={() => updateQty(item.id, -1)} className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-300 hover:border-orange-400 hover:text-orange-500 cursor-pointer transition-colors">−</button>
-                            <span className="w-6 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{item.qty}</span>
-                            <button onClick={() => updateQty(item.id, 1)} className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-300 hover:border-orange-400 hover:text-orange-500 cursor-pointer transition-colors">+</button>
-                          </div>
-                        </div>
-                      </div>
-                      <button onClick={() => remove(item.id)} className="self-start p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-300 hover:text-red-400 cursor-pointer transition-colors mt-0.5">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      <h3 className="font-bold text-gray-700 dark:text-gray-300 mb-1">Your cart is empty</h3>
+                      <p className="text-sm text-gray-400">Add items from the product listing to get started.</p>
+                      <button onClick={onClose} className="mt-4 px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-bold rounded-xl cursor-pointer transition-colors">
+                        Browse Products
                       </button>
                     </div>
-                  ))}
+                  ) : (
+                    items.map((item) => (
+                      <div key={item.key} className="flex gap-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
+                        <div className="w-20 h-24 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 shrink-0">
+                          <img src={item.img} alt={item.name} className="w-full h-full object-cover" onError={(e) => e.target.src = "https://placehold.co/80x96"} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-gray-400 uppercase">{item.brand}</p>
+                          <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-tight mt-0.5 line-clamp-2">{item.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {item.size && <span className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded">Size: {item.size}</span>}
+                            <span className="w-3.5 h-3.5 rounded-full border border-gray-300" style={{ background: item.color }} />
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="font-extrabold text-gray-900 dark:text-gray-100 text-sm">{fmt(item.price)}</span>
+                              {item.mrp > item.price && <span className="text-xs text-gray-400 line-through">{fmt(item.mrp)}</span>}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => updateQty(item.key, -1)} className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-300 hover:border-orange-400 hover:text-orange-500 cursor-pointer transition-colors">−</button>
+                              <span className="w-6 text-center text-sm font-bold text-gray-900 dark:text-gray-100">{item.qty}</span>
+                              <button onClick={() => updateQty(item.key, 1)} className="w-7 h-7 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-center text-sm font-bold text-gray-600 dark:text-gray-300 hover:border-orange-400 hover:text-orange-500 cursor-pointer transition-colors">+</button>
+                            </div>
+                          </div>
+                        </div>
+                        <button onClick={() => removeItem(item.key)} className="self-start p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-gray-300 hover:text-red-400 cursor-pointer transition-colors mt-0.5">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        </button>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 <div className="border-t border-gray-100 dark:border-gray-800 px-5 py-4 shrink-0 space-y-2">
@@ -266,7 +273,11 @@ export default function CartPage({ onClose, onAuthNeeded }) {
                   <div className="flex justify-between font-extrabold text-base text-gray-900 dark:text-gray-100 pt-2 border-t border-gray-100 dark:border-gray-800">
                     <span>Total</span><span>{fmt(total)}</span>
                   </div>
-                  <button onClick={() => setStep("address")} className="w-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-bold py-3.5 rounded-2xl transition-all cursor-pointer mt-1 text-sm shadow-lg shadow-orange-500/25">
+                  <button
+                    onClick={() => setStep("address")}
+                    disabled={items.length === 0}
+                    className="w-full bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-bold py-3.5 rounded-2xl transition-all cursor-pointer mt-1 text-sm shadow-lg shadow-orange-500/25 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
                     Proceed to Checkout →
                   </button>
                 </div>

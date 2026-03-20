@@ -2,26 +2,29 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import axios from "axios";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
+import { CartProvider, useCart } from "./context/CartContext";
+
 import FilterPanel from "./components/FilterPanel";
 import ProductGrid from "./components/ProductGrid";
 import SortBar from "./components/SortBar";
 import SearchBar from "./components/SearchBar";
 import Recommendations from "./components/Recommendations";
 import ProfilePage from "./components/ProfilePage";
+import ProductDetailModal from "./components/ProductDetailModal";
 import CartPage from "./components/CartPage";
 import MobileMenu from "./components/MobileMenu";
 import AuthModal from "./components/AuthModal";
 
 const NAV_CATS = ["All", "Men", "Women", "Kids", "Sports"];
 
-function Header({ total, onSearch, selectedCategory, onCategoryChange, onProfileOpen, onCartOpen, setMobileMenuOpen }) {
+function Header({ total, cartCount, onSearch, selectedCategory, onCategoryChange, onProfileOpen, onCartOpen, setMobileMenuOpen }) {
   const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="sticky top-0 z-40 bg-white dark:bg-gray-950 shadow-sm dark:border-b dark:border-gray-800 transition-colors duration-300">
       {/* Top bar */}
       <div className="border-b border-gray-100 dark:border-gray-800">
-        <div className="max-w-screen-xl mx-auto px-4 lg:px-6 h-14 flex items-center gap-3">
+        <div className="max-w-full mx-auto px-4 lg:px-6 h-14 flex items-center gap-3">
 
           {/* Hamburger — mobile only */}
           <button
@@ -35,9 +38,9 @@ function Header({ total, onSearch, selectedCategory, onCategoryChange, onProfile
 
           {/* Logo */}
           <a href="/" className="flex items-center gap-2 shrink-0 no-underline">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-black text-sm shadow-md shadow-orange-300/40">F</div>
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-black text-sm shadow-md shadow-orange-300/40">B</div>
             <span className="font-display font-black text-xl tracking-tight text-gray-900 dark:text-white hidden sm:block">
-              Fabric<span className="text-orange-500">Hub</span>
+              Bidyut<span className="text-orange-500"> Innovation Store</span>
             </span>
           </a>
 
@@ -64,7 +67,11 @@ function Header({ total, onSearch, selectedCategory, onCategoryChange, onProfile
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">2</span>
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              )}
             </button>
 
             {/* Profile */}
@@ -86,7 +93,7 @@ function Header({ total, onSearch, selectedCategory, onCategoryChange, onProfile
       </div>
 
       {/* Category nav — desktop only */}
-      <div className="hidden lg:block max-w-screen-xl mx-auto px-6">
+      <div className="hidden lg:block max-w-full mx-auto px-6">
         <nav className="flex items-center gap-1 h-10">
           {NAV_CATS.map((cat) => (
             <button key={cat} onClick={() => onCategoryChange(cat)}
@@ -112,8 +119,8 @@ function Header({ total, onSearch, selectedCategory, onCategoryChange, onProfile
 
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
+  const { count: cartCount }   = useCart();
   const [products, setProducts]     = useState([]);
-  const [categories, setCategories] = useState(["All"]);
   const [priceRange, setPriceRange] = useState({ min: 0, max: 10000 });
   const [loading, setLoading]       = useState(false);
   const [total, setTotal]           = useState(0);
@@ -124,8 +131,22 @@ function AppContent() {
   const [sortBy, setSortBy]         = useState("");
   const [search, setSearch]         = useState("");
   const [selectedSize, setSelectedSize] = useState("");
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [minDiscount, setMinDiscount]       = useState(0);
+  const [minRating, setMinRating]           = useState(0);
+  const [page, setPage]     = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const LIMIT = 20;
+
+  const handleBrandToggle = (brand) => {
+    setSelectedBrands(prev =>
+      prev.includes(brand) ? prev.filter(b => b !== brand) : [...prev, brand]
+    );
+  };
 
   // UI panels
+  const [selectedProduct, setSelectedProduct] = useState(null);
   const [profileOpen, setProfileOpen]   = useState(false);
   const [cartOpen, setCartOpen]         = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -136,36 +157,57 @@ function AppContent() {
   useEffect(() => {
     async function fetchMeta() {
       try {
-        const [catRes, priceRes] = await Promise.all([
-          axios.get("/api/products/categories"),
-          axios.get("/api/products/price-range"),
-        ]);
-        setCategories(catRes.data.categories);
-        setPriceRange({ min: priceRes.data.minPrice, max: priceRes.data.maxPrice });
-        setMinPrice(priceRes.data.minPrice);
-        setMaxPrice(priceRes.data.maxPrice);
+        const res = await axios.get("/api/products/price-range");
+        setPriceRange({ min: res.data.minPrice, max: res.data.maxPrice });
+        setMinPrice(res.data.minPrice);
+        setMaxPrice(res.data.maxPrice);
       } catch (err) { console.error(err.message); }
     }
     fetchMeta();
   }, []);
 
+  const buildParams = useCallback(() => ({
+    category: selectedCategory,
+    minPrice, maxPrice,
+    sortBy, search,
+    size: selectedSize,
+    brands: selectedBrands.join(","),
+    minDiscount: minDiscount || undefined,
+    minRating:   minRating   || undefined,
+    limit: LIMIT,
+  }), [selectedCategory, minPrice, maxPrice, sortBy, search, selectedSize, selectedBrands, minDiscount, minRating]);
+
   const fetchProducts = useCallback(async (params) => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/products", { params });
+      const res = await axios.get("/api/products", { params: { ...params, page: 1 } });
       setProducts(res.data.products);
       setTotal(res.data.total);
+      setPage(1);
+      setHasMore(res.data.page < res.data.pages);
     } catch (err) { console.error(err.message); }
     finally { setLoading(false); }
   }, []);
 
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const res = await axios.get("/api/products", { params: { ...buildParams(), page: nextPage } });
+      setProducts(prev => [...prev, ...res.data.products]);
+      setPage(nextPage);
+      setHasMore(nextPage < res.data.pages);
+    } catch (err) { console.error(err.message); }
+    finally { setLoadingMore(false); }
+  };
+
   useEffect(() => {
     clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(() => {
-      fetchProducts({ category: selectedCategory, minPrice, maxPrice, sortBy, search, size: selectedSize });
+      fetchProducts(buildParams());
     }, 300);
     return () => clearTimeout(debounceTimer.current);
-  }, [selectedCategory, minPrice, maxPrice, sortBy, search, selectedSize, fetchProducts]);
+  }, [buildParams, fetchProducts]);
 
   // Lock body scroll when panels are open
   useEffect(() => {
@@ -177,6 +219,7 @@ function AppContent() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-300">
       <Header
         total={total}
+        cartCount={cartCount}
         onSearch={setSearch}
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
@@ -185,11 +228,8 @@ function AppContent() {
         setMobileMenuOpen={setMobileMenuOpen}
       />
 
-      <main className="max-w-screen-xl mx-auto px-4 lg:px-6 py-5 grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-5 items-start">
+      <main className="max-w-full mx-auto px-4 lg:px-6 py-5 grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-5 items-start">
         <FilterPanel
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
           priceRange={priceRange}
           minPrice={minPrice}
           maxPrice={maxPrice}
@@ -197,16 +237,24 @@ function AppContent() {
           onMaxPriceChange={setMaxPrice}
           selectedSize={selectedSize}
           onSizeChange={setSelectedSize}
+          selectedBrands={selectedBrands}
+          onBrandToggle={handleBrandToggle}
+          minDiscount={minDiscount}
+          onMinDiscountChange={setMinDiscount}
+          minRating={minRating}
+          onMinRatingChange={setMinRating}
+          selectedCategory={selectedCategory}
         />
 
         <div className="space-y-4">
           {!search.trim() && <Recommendations category={selectedCategory} />}
           <SortBar sortBy={sortBy} onSortChange={setSortBy} total={total} loading={loading} selectedCategory={selectedCategory} />
-          <ProductGrid products={products} loading={loading} />
+          <ProductGrid products={products} loading={loading} hasMore={hasMore} loadingMore={loadingMore} onLoadMore={loadMore} onProductClick={setSelectedProduct} />
         </div>
       </main>
 
       {/* Slide-in panels */}
+      {selectedProduct && <ProductDetailModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
       {profileOpen   && <ProfilePage onClose={() => setProfileOpen(false)} />}
       {cartOpen      && <CartPage    onClose={() => setCartOpen(false)} onAuthNeeded={() => { setCartOpen(false); setAuthModalOpen(true); }} />}
       {authModalOpen && <AuthModal   onClose={() => setAuthModalOpen(false)} />}
@@ -227,9 +275,11 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
+      <CartProvider>
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
+      </CartProvider>
     </AuthProvider>
   );
 }
