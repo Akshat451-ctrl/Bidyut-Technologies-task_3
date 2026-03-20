@@ -8,12 +8,12 @@ export function AuthProvider({ children }) {
   const [token, setToken]     = useState(() => localStorage.getItem("fh_token") || "");
   const [loading, setLoading] = useState(true);
 
-  // Set axios default header whenever token changes
+  // Set auth header on the api instance whenever token changes
   useEffect(() => {
     if (token) {
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     } else {
-      delete axios.defaults.headers.common["Authorization"];
+      delete api.defaults.headers.common["Authorization"];
     }
   }, [token]);
 
@@ -40,7 +40,7 @@ export function AuthProvider({ children }) {
     setToken(t);
     setUser(u);
     localStorage.setItem("fh_token", t);
-    axios.defaults.headers.common["Authorization"] = `Bearer ${t}`;
+    api.defaults.headers.common["Authorization"] = `Bearer ${t}`;
   };
 
   const register = async (name, email, password) => {
@@ -49,14 +49,14 @@ export function AuthProvider({ children }) {
     setToken(t);
     setUser(u);
     localStorage.setItem("fh_token", t);
-    axios.defaults.headers.common["Authorization"] = `Bearer ${t}`;
+    api.defaults.headers.common["Authorization"] = `Bearer ${t}`;
   };
 
   const logout = () => {
     setToken("");
     setUser(null);
     localStorage.removeItem("fh_token");
-    delete axios.defaults.headers.common["Authorization"];
+    delete api.defaults.headers.common["Authorization"];
   };
 
   const updateProfile = async (data) => {
