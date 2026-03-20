@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import axios from "axios";
+import api from "../api.js";
 
 const fmt = (p) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p);
@@ -22,7 +22,7 @@ export default function SearchBar({ onSearch }) {
     if (!val.trim()) { setSuggestions([]); return; }
     setLoading(true);
     try {
-      const res = await axios.get("/api/products/search-suggestions", { params: { q: val } });
+      const res = await api.get("/api/products/search-suggestions", { params: { q: val } });
       setSuggestions(res.data.suggestions);
     } catch { setSuggestions([]); }
     finally { setLoading(false); }

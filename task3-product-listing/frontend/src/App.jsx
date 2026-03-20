@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import axios from "axios";
+import api from "./api.js";
+import mockProducts from "./mockProducts.js";
 import { ThemeProvider, useTheme } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider, useCart } from "./context/CartContext";
@@ -196,7 +197,7 @@ function AppContent() {
   useEffect(() => {
     async function fetchMeta() {
       try {
-        const res = await axios.get("/api/products/price-range");
+        const res = await api.get("/api/products/price-range");
         setPriceRange({ min: res.data.minPrice, max: res.data.maxPrice });
         setMinPrice(res.data.minPrice);
         setMaxPrice(res.data.maxPrice);
@@ -221,12 +222,18 @@ function AppContent() {
   const fetchProducts = useCallback(async (params) => {
     setLoading(true);
     try {
-      const res = await axios.get("/api/products", { params: { ...params, page: 1 } });
+      const res = await api.get("/api/products", { params: { ...params, page: 1 } });
       setProducts(res.data.products);
       setTotal(res.data.total);
       setPage(1);
       setHasMore(res.data.page < res.data.pages);
-    } catch (err) { console.error(err.message); }
+    } catch (err) {
+      console.error("API unavailable, showing demo products:", err.message);
+      setProducts(mockProducts);
+      setTotal(mockProducts.length);
+      setPage(1);
+      setHasMore(false);
+    }
     finally { setLoading(false); }
   }, []);
 
@@ -234,7 +241,7 @@ function AppContent() {
     setLoadingMore(true);
     try {
       const nextPage = page + 1;
-      const res = await axios.get("/api/products", { params: { ...buildParams(), page: nextPage } });
+      const res = await api.get("/api/products", { params: { ...buildParams(), page: nextPage } });
       setProducts(prev => [...prev, ...res.data.products]);
       setPage(nextPage);
       setHasMore(nextPage < res.data.pages);

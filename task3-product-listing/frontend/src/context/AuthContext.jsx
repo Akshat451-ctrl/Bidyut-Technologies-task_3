@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api.js";
 
 const AuthContext = createContext();
 
@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
     async function fetchMe() {
       if (!token) { setLoading(false); return; }
       try {
-        const res = await axios.get("/api/auth/me");
+        const res = await api.get("/api/auth/me");
         setUser(res.data.user);
       } catch {
         setToken("");
@@ -35,7 +35,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const res = await axios.post("/api/auth/login", { email, password });
+    const res = await api.post("/api/auth/login", { email, password });
     const { token: t, user: u } = res.data;
     setToken(t);
     setUser(u);
@@ -44,7 +44,7 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (name, email, password) => {
-    const res = await axios.post("/api/auth/register", { name, email, password });
+    const res = await api.post("/api/auth/register", { name, email, password });
     const { token: t, user: u } = res.data;
     setToken(t);
     setUser(u);
@@ -60,13 +60,13 @@ export function AuthProvider({ children }) {
   };
 
   const updateProfile = async (data) => {
-    const res = await axios.put("/api/auth/update", data);
+    const res = await api.put("/api/auth/update", data);
     setUser(res.data.user);
     return res.data.user;
   };
 
   const changePassword = async (currentPassword, newPassword) => {
-    await axios.put("/api/auth/change-password", { currentPassword, newPassword });
+    await api.put("/api/auth/change-password", { currentPassword, newPassword });
   };
 
   return (

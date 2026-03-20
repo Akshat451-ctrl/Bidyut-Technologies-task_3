@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api.js";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 
@@ -62,7 +62,7 @@ export default function CartPage({ onClose, onAuthNeeded }) {
     setPaying(true); setPayError("");
     try {
       // Check if real Razorpay keys are configured
-      const keyRes = await axios.get("/api/payment/key");
+      const keyRes = await api.get("/api/payment/key");
       const keyId = keyRes.data.keyId;
       const demoMode = !keyId || keyId.includes("YourKey") || keyId === "rzp_test_YourKeyIDHere";
       setIsDemo(demoMode);
@@ -77,7 +77,7 @@ export default function CartPage({ onClose, onAuthNeeded }) {
       if (!scriptLoaded) throw new Error("Razorpay SDK failed to load. Check your internet connection.");
 
       // Create order on backend
-      const { data } = await axios.post("/api/payment/create-order", { amount: total });
+      const { data } = await api.post("/api/payment/create-order", { amount: total });
 
       const options = {
         key:         data.keyId,
@@ -98,7 +98,7 @@ export default function CartPage({ onClose, onAuthNeeded }) {
         theme: { color: "#f97316" },
         handler: async (response) => {
           try {
-            const verify = await axios.post("/api/payment/verify", {
+            const verify = await api.post("/api/payment/verify", {
               razorpay_order_id:   response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature:  response.razorpay_signature,

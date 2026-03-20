@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "../api.js";
 
 const fmt = (p) =>
   new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(p);
@@ -12,7 +12,7 @@ export default function Recommendations({ category }) {
 
   useEffect(() => {
     setLoading(true);
-    axios.get("/api/products/recommendations", {
+    api.get("/api/products/recommendations", {
       params: { category: category !== "All" ? category : undefined },
     })
       .then((r) => setItems(r.data.products))

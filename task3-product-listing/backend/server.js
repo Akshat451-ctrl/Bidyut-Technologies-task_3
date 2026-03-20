@@ -9,7 +9,14 @@ const paymentRoutes = require("./routes/payment");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:3000",
+    "https://bidyut-technologies-task-3.vercel.app",
+    /\.vercel\.app$/,
+  ],
+  credentials: true,
+}));
 app.use(express.json());
 
 app.use("/api/products", productRoutes);

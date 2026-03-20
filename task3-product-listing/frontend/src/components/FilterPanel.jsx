@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api.js";
 
 const ALL_SIZES = ["XS","S","M","L","XL","XXL","28","30","32","34","36","2Y","4Y","6Y","8Y"];
 const DISCOUNT_OPTIONS = [10, 20, 30, 40, 50];
@@ -19,7 +19,7 @@ export default function FilterPanel({
   const fmt = (v) => `₹${Number(v || 0).toLocaleString("en-IN")}`;
 
   useEffect(() => {
-    axios.get("/api/products/filter-options", {
+    api.get("/api/products/filter-options", {
       params: { category: selectedCategory },
     }).then(res => setBrands(res.data.brands || [])).catch(() => {});
   }, [selectedCategory]);
