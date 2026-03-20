@@ -15,9 +15,24 @@ import CartPage from "./components/CartPage";
 import MobileMenu from "./components/MobileMenu";
 import AuthModal from "./components/AuthModal";
 
-const NAV_CATS = ["All", "Men", "Women", "Kids", "Sports"];
+const NAV_ITEMS = [
+  { label: "All",        type: "category",    value: "All" },
+  { label: "Men",        type: "category",    value: "Men" },
+  { label: "Women",      type: "category",    value: "Women" },
+  { label: "Kids",       type: "category",    value: "Kids" },
+  { label: "Sports",     type: "category",    value: "Sports" },
+  { label: "Ethnic",     type: "subCategory", value: "Ethnic" },
+  { label: "Jeans",      type: "subCategory", value: "Jeans" },
+  { label: "Dresses",    type: "subCategory", value: "Dresses" },
+  { label: "T-Shirts",   type: "subCategory", value: "T-Shirts" },
+  { label: "Jackets",    type: "subCategory", value: "Jackets" },
+  { label: "Formal",     type: "subCategory", value: "Formal" },
+  { label: "Hoodies",    type: "subCategory", value: "Hoodies" },
+  { label: "Sweaters",   type: "subCategory", value: "Sweaters" },
+  { label: "🔥 Sale",   type: "sale",        value: "sale" },
+];
 
-function Header({ total, cartCount, onSearch, selectedCategory, onCategoryChange, onProfileOpen, onCartOpen, setMobileMenuOpen }) {
+function Header({ total, cartCount, onSearch, selectedNav, onNavChange, onProfileOpen, onCartOpen, setMobileMenuOpen }) {
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -93,24 +108,29 @@ function Header({ total, cartCount, onSearch, selectedCategory, onCategoryChange
       </div>
 
       {/* Category nav — desktop only */}
-      <div className="hidden lg:block max-w-full mx-auto px-6">
-        <nav className="flex items-center gap-1 h-10">
-          {NAV_CATS.map((cat) => (
-            <button key={cat} onClick={() => onCategoryChange(cat)}
-              className={`shrink-0 px-4 h-full text-sm font-semibold border-b-2 transition-all duration-200 cursor-pointer
-                ${selectedCategory === cat
-                  ? "border-orange-500 text-orange-600 dark:text-orange-400"
-                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
-                }`}
-            >
-              {cat}
-            </button>
-          ))}
-          <div className="ml-auto">
-            <span className="text-xs font-semibold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 border border-orange-100 dark:border-orange-500/20 px-3 py-1 rounded-full">
-              🔥 Sale Up to 50% Off
-            </span>
-          </div>
+      <div className="hidden lg:block max-w-full mx-auto px-6 overflow-x-auto">
+        <nav className="flex items-center gap-0.5 h-10 min-w-max">
+          {NAV_ITEMS.map((item) => {
+            const isActive = selectedNav === item.value;
+            const isSaleBtn = item.type === "sale";
+            return (
+              <button
+                key={item.value}
+                onClick={() => onNavChange(item)}
+                className={`shrink-0 px-3.5 h-full text-sm font-semibold border-b-2 transition-all duration-200 cursor-pointer whitespace-nowrap
+                  ${isSaleBtn
+                    ? isActive
+                      ? "border-pink-500 text-pink-600 dark:text-pink-400"
+                      : "border-transparent text-pink-500 dark:text-pink-400 hover:text-pink-600"
+                    : isActive
+                      ? "border-orange-500 text-orange-600 dark:text-orange-400"
+                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                  }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
       </div>
     </header>
@@ -126,6 +146,8 @@ function AppContent() {
   const [total, setTotal]           = useState(0);
 
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [isSaleFilter, setIsSaleFilter] = useState(false);
   const [minPrice, setMinPrice]     = useState(0);
   const [maxPrice, setMaxPrice]     = useState(10000);
   const [sortBy, setSortBy]         = useState("");
@@ -138,6 +160,23 @@ function AppContent() {
   const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const LIMIT = 20;
+
+  const selectedNav = isSaleFilter ? "sale" : selectedSubCategory || selectedCategory;
+
+  const handleNavChange = (item) => {
+    if (item.type === "category") {
+      setSelectedCategory(item.value);
+      setSelectedSubCategory("");
+      setIsSaleFilter(false);
+    } else if (item.type === "subCategory") {
+      setSelectedSubCategory(item.value);
+      setSelectedCategory("All");
+      setIsSaleFilter(false);
+    } else if (item.type === "sale") {
+      setIsSaleFilter(prev => !prev);
+      setSelectedSubCategory("");
+    }
+  };
 
   const handleBrandToggle = (brand) => {
     setSelectedBrands(prev =>
@@ -168,6 +207,8 @@ function AppContent() {
 
   const buildParams = useCallback(() => ({
     category: selectedCategory,
+    subCategory: selectedSubCategory || undefined,
+    isSale: isSaleFilter || undefined,
     minPrice, maxPrice,
     sortBy, search,
     size: selectedSize,
@@ -175,7 +216,7 @@ function AppContent() {
     minDiscount: minDiscount || undefined,
     minRating:   minRating   || undefined,
     limit: LIMIT,
-  }), [selectedCategory, minPrice, maxPrice, sortBy, search, selectedSize, selectedBrands, minDiscount, minRating]);
+  }), [selectedCategory, selectedSubCategory, isSaleFilter, minPrice, maxPrice, sortBy, search, selectedSize, selectedBrands, minDiscount, minRating]);
 
   const fetchProducts = useCallback(async (params) => {
     setLoading(true);
@@ -221,8 +262,8 @@ function AppContent() {
         total={total}
         cartCount={cartCount}
         onSearch={setSearch}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
+        selectedNav={selectedNav}
+        onNavChange={handleNavChange}
         onProfileOpen={() => setProfileOpen(true)}
         onCartOpen={() => setCartOpen(true)}
         setMobileMenuOpen={setMobileMenuOpen}
@@ -261,8 +302,8 @@ function AppContent() {
       <MobileMenu
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
-        selectedCategory={selectedCategory}
-        onCategoryChange={setSelectedCategory}
+        selectedNav={selectedNav}
+        onNavChange={handleNavChange}
         onProfileClick={() => setProfileOpen(true)}
         onCartClick={() => setCartOpen(true)}
         theme={theme}

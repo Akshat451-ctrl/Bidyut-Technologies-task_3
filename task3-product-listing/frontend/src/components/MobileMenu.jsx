@@ -1,17 +1,34 @@
-const NAV_CATS = ["All", "Men", "Women", "Kids", "Sports"];
+const NAV_ITEMS = [
+  { label: "All",       type: "category",    value: "All",      icon: "🌐" },
+  { label: "Men",       type: "category",    value: "Men",      icon: "👔" },
+  { label: "Women",     type: "category",    value: "Women",    icon: "👗" },
+  { label: "Kids",      type: "category",    value: "Kids",     icon: "🧒" },
+  { label: "Sports",    type: "category",    value: "Sports",   icon: "🏃" },
+];
 
-export default function MobileMenu({ isOpen, onClose, selectedCategory, onCategoryChange, onProfileClick, onCartClick, theme, toggleTheme }) {
+const SUB_ITEMS = [
+  { label: "Ethnic",    value: "Ethnic",   icon: "🎽" },
+  { label: "Jeans",     value: "Jeans",    icon: "👖" },
+  { label: "Dresses",   value: "Dresses",  icon: "👘" },
+  { label: "T-Shirts",  value: "T-Shirts", icon: "👕" },
+  { label: "Jackets",   value: "Jackets",  icon: "🧥" },
+  { label: "Formal",    value: "Formal",   icon: "🤵" },
+  { label: "Hoodies",   value: "Hoodies",  icon: "🧣" },
+  { label: "Sweaters",  value: "Sweaters", icon: "🧶" },
+];
+
+export default function MobileMenu({ isOpen, onClose, selectedNav, onNavChange, onProfileClick, onCartClick, theme, toggleTheme }) {
   if (!isOpen) return null;
+
+  const handleNav = (item) => { onNavChange(item); onClose(); };
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col lg:hidden">
-      {/* Overlay */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Drawer */}
-      <div className="relative bg-white dark:bg-gray-950 w-72 h-full shadow-2xl flex flex-col" style={{ animation: "slideLeft 0.25s ease" }}>
+      <div className="relative bg-white dark:bg-gray-950 w-72 h-full shadow-2xl flex flex-col overflow-y-auto" style={{ animation: "slideLeft 0.25s ease" }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center justify-between px-5 h-14 border-b border-gray-100 dark:border-gray-800 shrink-0">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-pink-500 rounded-lg flex items-center justify-center text-white font-black text-xs">B</div>
             <span className="font-display font-black text-lg">
@@ -27,19 +44,49 @@ export default function MobileMenu({ isOpen, onClose, selectedCategory, onCatego
         <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">Shop by Category</p>
           <div className="space-y-1">
-            {NAV_CATS.map((cat) => (
-              <button key={cat} onClick={() => { onCategoryChange(cat); onClose(); }}
+            {NAV_ITEMS.map((item) => (
+              <button key={item.value} onClick={() => handleNav(item)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer
-                  ${selectedCategory === cat
+                  ${selectedNav === item.value
                     ? "bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900"
                   }`}
               >
-                <span>{cat === "All" ? "🌐" : cat === "Men" ? "👔" : cat === "Women" ? "👗" : cat === "Kids" ? "🧒" : "🏃"}</span>
-                {cat}
-                {selectedCategory === cat && <span className="ml-auto text-orange-500 text-xs">✓</span>}
+                <span>{item.icon}</span>
+                {item.label}
+                {selectedNav === item.value && <span className="ml-auto text-orange-500 text-xs">✓</span>}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Sub-categories */}
+        <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2.5">Browse by Style</p>
+          <div className="space-y-1">
+            {SUB_ITEMS.map((item) => (
+              <button key={item.value} onClick={() => handleNav({ type: "subCategory", ...item })}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer
+                  ${selectedNav === item.value
+                    ? "bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900"
+                  }`}
+              >
+                <span>{item.icon}</span>
+                {item.label}
+                {selectedNav === item.value && <span className="ml-auto text-orange-500 text-xs">✓</span>}
+              </button>
+            ))}
+            <button onClick={() => handleNav({ type: "sale", value: "sale", label: "🔥 Sale" })}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-all cursor-pointer
+                ${selectedNav === "sale"
+                  ? "bg-pink-50 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400"
+                  : "text-pink-500 dark:text-pink-400 hover:bg-gray-50 dark:hover:bg-gray-900"
+                }`}
+            >
+              <span>🔥</span> Sale
+              {selectedNav === "sale" && <span className="ml-auto text-pink-500 text-xs">✓</span>}
+            </button>
           </div>
         </div>
 
@@ -54,7 +101,6 @@ export default function MobileMenu({ isOpen, onClose, selectedCategory, onCatego
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
             Cart
-            <span className="ml-auto bg-orange-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">2</span>
           </button>
           <button onClick={toggleTheme}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-900 cursor-pointer transition-colors">
@@ -64,7 +110,7 @@ export default function MobileMenu({ isOpen, onClose, selectedCategory, onCatego
         </div>
 
         {/* Sale Banner */}
-        <div className="mx-4 mt-auto mb-5 p-4 bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl">
+        <div className="mx-4 mt-auto mb-5 p-4 bg-gradient-to-r from-orange-500 to-pink-500 rounded-2xl shrink-0">
           <p className="text-white font-black text-base">🔥 SALE LIVE</p>
           <p className="text-white/80 text-xs mt-0.5">Up to 50% off on all categories</p>
         </div>

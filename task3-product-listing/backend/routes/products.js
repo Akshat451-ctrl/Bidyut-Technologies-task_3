@@ -8,7 +8,7 @@ router.get("/", async (req, res) => {
     const {
       category, subCategory, gender, minPrice, maxPrice,
       sortBy, search, size, brands, minDiscount, minRating,
-      page = 1, limit = 16
+      isSale, page = 1, limit = 16
     } = req.query;
 
     const filter = {};
@@ -27,6 +27,7 @@ router.get("/", async (req, res) => {
 
     if (category && category !== "All") filter.category = category;
     if (subCategory) filter.subCategory = subCategory;
+    if (isSale === "true" || isSale === "1") filter.isSale = true;
     if (gender && gender !== "All") filter.gender = gender;
     if (size) filter.sizes = size;
 
